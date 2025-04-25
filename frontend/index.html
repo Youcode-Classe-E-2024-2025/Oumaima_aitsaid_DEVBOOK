@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevBook - Bibliothèque pour développeurs</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome pour les icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Scripts de configuration Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4a6fa5',
+                        'primary-dark': '#3a5983',
+                        secondary: '#f7f9fc',
+                        accent: '#e74c3c',
+                        success: '#2ecc71',
+                        danger: '#e74c3c',
+                        warning: '#f39c12',
+                        info: '#3498db'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Style personnalisé pour les éléments non couverts par Tailwind -->
+    <style>
+        .sidebar {
+            width: 250px;
+            transition: width 0.3s;
+        }
+        .sidebar.collapsed {
+            width: 60px;
+        }
+        .main-content {
+            margin-left: 250px;
+            transition: margin-left 0.3s;
+        }
+        .sidebar.collapsed + .main-content {
+            margin-left: 60px;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .toast.show {
+            transform: translateY(0);
+        }
+        /* Styles pour la notation par étoiles */
+        .rating .star.active {
+            content: "★";
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="flex min-h-screen">
+        <!-- Sidebar / Menu -->
+        <nav class="sidebar bg-white shadow-md fixed h-full z-10 overflow-y-auto" id="sidebar">
+            <div class="flex items-center justify-between p-5 border-b border-gray-200">
+                <h2 class="text-xl font-bold"><i class="fas fa-book text-primary"></i> DevBook</h2>
+                <button id="toggleSidebar" class="text-gray-500 hover:text-primary focus:outline-none">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <!-- Menu non connecté -->
+            <ul class="py-2" id="publicMenu">
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary active" data-page="login">
+                        <i class="fas fa-sign-in-alt w-5 text-center mr-3"></i> Connexion
+                    </a>
+                </li>
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary" data-page="register">
+                        <i class="fas fa-user-plus w-5 text-center mr-3"></i> Inscription
+                    </a>
+                </li>
+            </ul>
+            
+            <!-- Menu étudiant -->
+            <ul class="py-2 hidden" id="studentMenu">
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary" data-page="books">
+                        <i class="fas fa-book w-5 text-center mr-3"></i> Livres
+                    </a>
+                </li>
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary" data-page="categories">
+                        <i class="fas fa-tags w-5 text-center mr-3"></i> Catégories
+                    </a>
+                </li>
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary" data-page="myBorrows">
+                        <i class="fas fa-hand-holding w-5 text-center mr-3"></i> Mes emprunts
+                    </a>
+                </li>
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary" data-page="profile">
+                        <i class="fas fa-user w-5 text-center mr-3"></i> Mon profil
+                    </a>
+                </li>
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary" id="logoutBtn">
+                        <i class="fas fa-sign-out-alt w-5 text-center mr-3"></i> Déconnexion
+                    </a>
+                </li>
+            </ul>
+            
+            <!-- Menu administrateur -->
+            <ul class="py-2 hidden" id="adminMenu">
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary" data-page="books">
+                        <i class="fas fa-book w-5 text-center mr-3"></i> Livres
+                    </a>
+                </li>
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary" data-page="categories">
+                        <i class="fas fa-tags w-5 text-center mr-3"></i> Catégories
+                    </a>
+                </li>
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary" data-page="users">
+                        <i class="fas fa-users w-5 text-center mr-3"></i> Utilisateurs
+                    </a>
+                </li>
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary" data-page="borrows">
+                        <i class="fas fa-hand-holding w-5 text-center mr-3"></i> Emprunts
+                    </a>
+                </li>
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary" data-page="stats">
+                        <i class="fas fa-chart-bar w-5 text-center mr-3"></i> Statistiques
+                    </a>
+                </li>
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary" data-page="profile">
+                        <i class="fas fa-user w-5 text-center mr-3"></i> Mon profil
+                    </a>
+                </li>
+                <li class="px-2">
+                    <a href="#" class="flex items-center p-3 rounded hover:bg-secondary hover:text-primary border-l-4 border-transparent hover:border-primary" id="adminLogoutBtn">
+                        <i class="fas fa-sign-out-alt w-5 text-center mr-3"></i> Déconnexion
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <!-- Contenu principal -->
+        <main class="main-content flex-1 p-6">
+            <div class="max-w-6xl mx-auto">
+                <!-- Page de connexion -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6" id="loginPage">
+                    <h1 class="text-2xl font-bold text-primary mb-6">Connexion</h1>
+                    <div class="bg-white p-6 rounded-lg">
+                        <form id="loginForm" class="space-y-4">
+                            <div>
+                                <label for="loginEmail" class="block font-medium mb-1">Email</label>
+                                <input type="email" id="loginEmail" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:border-primary" required>
+                            </div>
+                            <div>
+                                <label for="loginPassword" class="block font-medium mb-1">Mot de passe</label>
+                                <input type="password" id="loginPassword" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:border-primary" required>
+                            </div>
+                            <button type="submit" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 px-4 rounded-md transition">Se connecter</button>
+                            <p class="form-message mt-2 p-2 rounded-md" id="loginMessage"></p>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Page d'inscription -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6 hidden" id="registerPage">
+                    <h1 class="text-2xl font-bold text-primary mb-6">Inscription</h1>
+                    <div class="bg-white p-6 rounded-lg">
+                        <form id="registerForm" class="space-y-4">
+                            <div>
+                                <label for="registerName" class="block font-medium mb-1">Nom complet</label>
+                                <input type="text" id="registerName" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:border-primary" required>
+                            </div>
+                            <div>
+                                <label for="registerEmail" class="block font-medium mb-1">Email</label>
+                                <input type="email" id="registerEmail" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:border-primary" required>
+                            </div>
+                            <div>
+                                <label for="registerPassword" class="block font-medium mb-1">Mot de passe</label>
+                                <input type="password" id="registerPassword" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:border-primary" required minlength="6">
+                            </div>
+                            <div>
+                                <label for="registerPasswordConfirm" class="block font-medium mb-1">Confirmer le mot de passe</label>
+                                <input type="password" id="registerPasswordConfirm" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:border-primary" required minlength="6">
+                            </div>
+                            <button type="submit" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 px-4 rounded-md transition">S'inscrire</button>
+                            <p class="form-message mt-2 p-2 rounded-md" id="registerMessage"></p>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Page des livres -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6 hidden" id="booksPage">
+                    <div class="flex justify-between items-center mb-6">
+                        <h1 class="text-2xl font-bold text-primary">Livres</h1>
+                        <div class="header-actions admin-only hidden">
+                            <button id="addBookBtn" class="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-md transition flex items-center">
+                                <i class="fas fa-plus mr-2"></i> Ajouter un livre
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap items-center gap-4 mb-6">
+                        <div class="flex flex-1 min-w-[200px]">
+                            <input type="text" id="searchBooks" placeholder="Rechercher..." class="flex-1 p-2 border border-gray-300 rounded-l-md focus:outline-none focus:border-primary">
+                            <button id="searchBtn" class="bg-primary text-white px-4 rounded-r-md border-none">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex gap-2">
+                            <button class="filter-btn active bg-primary text-white py-2 px-3 rounded-md text-sm" data-filter="all">Tous</button>
+                            <button class="filter-btn bg-white border border-gray-300 py-2 px-3 rounded-md text-sm hover:bg-gray-100" data-filter="to_read">À lire</button>
+                            <button class="filter-btn bg-white border border-gray-300 py-2 px-3 rounded-md text-sm hover:bg-gray-100" data-filter="reading">En cours</button>
+                            <button class="filter-btn bg-white border border-gray-300 py-2 px-3 rounded-md text-sm hover:bg-gray-100" data-filter="read">Lus</button>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <label for="sortBooks" class="text-sm font-medium">Trier par:</label>
+                            <select id="sortBooks" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:border-primary text-sm">
+                                <option value="title_asc">Titre (A-Z)</option>
+                                <option value="title_desc">Titre (Z-A)</option>
+                                <option value="author_asc">Auteur (A-Z)</option>
+                                <option value="author_desc">Auteur (Z-A)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-6" id="booksGrid">
+                        <!-- Les livres seront ajoutés ici dynamiquement -->
+                        <div class="flex justify-center items-center py-6 text-gray-500">
+                            <div class="mr-3 h-6 w-6 border-t-4 border-b-4 border-primary rounded-full animate-spin"></div>
+                            Chargement des livres...
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-center gap-2 mt-6" id="booksPagination">
+                        <!-- Pagination ajoutée dynamiquement -->
+                    </div>
+                </div>
+                
+                <!-- Reste des pages (catégories, emprunts, etc.) -->
+                <!-- Je garde la structure existante pour ces pages, mais vous pourriez les convertir en Tailwind de la même façon -->
+                
+                <!-- Page des catégories -->
+                <div class="page hidden" id="categoriesPage">
+                    <div class="page-header">
+                        <h1>Catégories</h1>
+                        <div class="header-actions admin-only hidden">
+                            <button id="addCategoryBtn" class="btn btn-primary"><i class="fas fa-plus"></i> Ajouter une catégorie</button>
+                        </div>
+                    </div>
+                    
+                    <div class="categories-grid" id="categoriesGrid">
+                        <!-- Les catégories seront ajoutées ici dynamiquement -->
+                        <div class="loading">Chargement des catégories...</div>
+                    </div>
+                </div>
+                
+                <!-- Page des emprunts (admin) -->
+                <div class="page hidden" id="borrowsPage">
+                    <div class="page-header">
+                        <h1>Gestion des emprunts</h1>
+                    </div>
+                    
+                    <div class="filters-container">
+                        <div class="filter-buttons">
+                            <button class="borrow-filter-btn active" data-filter="all">Tous</button>
+                            <button class="borrow-filter-btn" data-filter="active">En cours</button>
+                            <button class="borrow-filter-btn" data-filter="overdue">En retard</button>
+                            <button class="borrow-filter-btn" data-filter="returned">Rendus</button>
+                        </div>
+                        
+                        <div class="date-filter">
+                            <label for="borrowDate">Filtrer par date:</label>
+                            <input type="date" id="borrowDate">
+                            <button id="filterDateBtn" class="btn btn-small">Filtrer</button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table" id="borrowsTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Livre</th>
+                                    <th>Emprunteur</th>
+                                    <th>Date d'emprunt</th>
+                                    <th>Date de retour prévue</th>
+                                    <th>Date de retour</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Les emprunts seront ajoutés ici dynamiquement -->
+                            </tbody>
+                        </table>
+                        <div class="loading">Chargement des emprunts...</div>
+                    </div>
+                    
+                    <div class="pagination" id="borrowsPagination">
+                        <!-- Pagination ajoutée dynamiquement -->
+                    </div>
+                </div>
+                
+                <!-- Page mes emprunts (étudiant) -->
+                <div class="page hidden" id="myBorrowsPage">
+                    <h1>Mes emprunts</h1>
+                    
+                    <div class="borrows-list" id="myBorrowsList">
+                        <!-- Les emprunts de l'utilisateur seront ajoutés ici dynamiquement -->
+                        <div class="loading">Chargement de vos emprunts...</div>
+                    </div>
+                </div>
+                
+                <!-- Page des utilisateurs (admin) -->
+                <div class="page hidden" id="usersPage">
+                    <div class="page-header">
+                        <h1>Gestion des utilisateurs</h1>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table" id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nom</th>
+                                    <th>Email</th>
+                                    <th>Rôle</th>
+                                    <th>Date d'inscription</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Les utilisateurs seront ajoutés ici dynamiquement -->
+                            </tbody>
+                        </table>
+                        <div class="loading">Chargement des utilisateurs...</div>
+                    </div>
+                </div>
+                
+                <!-- Page de statistiques (admin) -->
+                <div class="page hidden" id="statsPage">
+                    <h1>Statistiques</h1>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Emprunts</h3>
+                            <div class="stat-value" id="totalBorrows">-</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <h3>Emprunts actifs</h3>
+                            <div class="stat-value" id="activeBorrows">-</div>
+                            <div class="stat-label">En cours</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <h3>Emprunts en retard</h3>
+                            <div class="stat-value" id="overdueBorrows">-</div>
+                            <div class="stat-label">En retard</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <h3>Livres</h3>
+                            <div class="stat-value" id="totalBooks">-</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-charts">
+                        <div class="chart-container">
+                            <h3>Top 5 des livres les plus empruntés</h3>
+                            <canvas id="topBooksChart"></canvas>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <h3>Emprunts par catégorie</h3>
+                            <canvas id="categoriesChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-queries">
+                        <h3>Requêtes spécifiques</h3>
+                        
+                        <div class="query-section">
+                            <h4>Top 10 des livres les plus empruntés pour un mois spécifique</h4>
+                            <div class="query-form">
+                                <div class="form-group">
+                                    <label for="statsYear">Année:</label>
+                                    <input type="number" id="statsYear" min="2020" max="2030" value="2023">
+                                </div>
+                                <div class="form-group">
+                                    <label for="statsMonth">Mois:</label>
+                                    <select id="statsMonth">
+                                        <option value="1">Janvier</option>
+                                        <option value="2">Février</option>
+                                        <option value="3">Mars</option>
+                                        <option value="4">Avril</option>
+                                        <option value="5">Mai</option>
+                                        <option value="6">Juin</option>
+                                        <option value="7">Juillet</option>
+                                        <option value="8">Août</option>
+                                        <option value="9">Septembre</option>
+                                        <option value="10">Octobre</option>
+                                        <option value="11">Novembre</option>
+                                        <option value="12">Décembre</option>
+                                    </select>
+                                </div>
+                                <button id="queryTopBooks" class="btn btn-primary">Afficher</button>
+                            </div>
+                            <div id="topBooksResult" class="query-result">
+                                <!-- Résultats affichés ici -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Page de profil -->
+                <div class="page hidden" id="profilePage">
+                    <h1>Mon profil</h1>
+                    
+                    <div class="card">
+                        <form id="profileForm">
+                            <div class="form-group">
+                                <label for="profileName">Nom</label>
+                                <input type="text" id="profileName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="profileEmail">Email</label>
+                                <input type="email" id="profileEmail" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="profilePassword">Nouveau mot de passe (laisser vide pour ne pas changer)</label>
+                                <input type="password" id="profilePassword" minlength="6">
+                            </div>
+                            <div class="form-group">
+                                <label for="profilePasswordConfirm">Confirmer le nouveau mot de passe</label>
+                                <input type="password" id="profilePasswordConfirm" minlength="6">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                            <p class="form-message" id="profileMessage"></p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Modals -->
+    <div class="modal fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-50 hidden items-center justify-center" id="bookModal">
+        <div class="bg-white rounded-lg shadow-lg w-11/12 max-w-2xl max-h-[90vh] overflow-y-auto relative p-6">
+            <span class="close-modal absolute top-3 right-3 text-2xl cursor-pointer text-gray-500 hover:text-gray-700">&times;</span>
+            <h2 id="bookModalTitle" class="text-xl font-bold mb-6">Ajouter un livre</h2>
+            <form id="bookForm" class="space-y-4">
+                <input type="hidden" id="bookId">
+                <div class="form-group">
+                    <label for="bookTitle" class="block font-medium mb-1">Titre</label>
+                    <input type="text" id="bookTitle" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:border-primary" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookAuthor" class="block font-medium mb-1">Auteur</label>
+                    <input type="text" id="bookAuthor" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:border-primary" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookCategory" class="block font-medium mb-1">Catégorie</label>
+                    <select id="bookCategory" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:border-primary" required>
+                        <!-- Options ajoutées dynamiquement -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="bookStatus" class="block font-medium mb-1">Statut</label>
+                    <select id="bookStatus" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:border-primary">
+                        <option value="to_read">À lire</option>
+                        <option value="reading">En cours</option>
+                        <option value="read">Lu</option>
+                    </select>
+                </div>
+                <div class="form-group" id="ratingGroup">
+                    <label for="bookRating" class="block font-medium mb-1">Note (0-5)</label>
+                    <div class="rating flex text-2xl text-yellow-400">
+                        <span class="star cursor-pointer" data-value="1">☆</span>
+                        <span class="star cursor-pointer" data-value="2">☆</span>
+                        <span class="star cursor-pointer" data-value="3">☆</span>
+                        <span class="star cursor-pointer" data-value="4">☆</span>
+                        <span class="star cursor-pointer" data-value="5">☆</span>
+                    </div>
+                    <input type="hidden" id="bookRating" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="bookDescription" class="block font-medium mb-1">Description</label>
+                    <textarea id="bookDescription" rows="4" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:border-primary"></textarea>
+                </div>
+                <button type="submit" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 px-4 rounded-md transition">Enregistrer</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Les autres modals peuvent être convertis de la même façon -->
+    <div class="modal" id="categoryModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="categoryModalTitle">Ajouter une catégorie</h2>
+            <form id="categoryForm">
+                <input type="hidden" id="categoryId">
+                <div class="form-group">
+                    <label for="categoryName">Nom</label>
+                    <input type="text" id="categoryName" required>
+                </div>
+                <div class="form-group">
+                    <label for="categoryDescription">Description</label>
+                    <textarea id="categoryDescription" rows="4"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modal" id="userModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="userModalTitle">Modifier l'utilisateur</h2>
+            <form id="userForm">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label for="userName">Nom</label>
+                    <input type="text" id="userName" required>
+                </div>
+                <div class="form-group">
+                    <label for="userEmail">Email</label>
+                    <input type="email" id="userEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="userRole">Rôle</label>
+                    <select id="userRole">
+                        <option value="1">Administrateur</option>
+                        <option value="2">Étudiant</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="userPassword">Nouveau mot de passe (laisser vide pour ne pas changer)</label>
+                    <input type="password" id="userPassword">
+                </div>
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modal fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-50 hidden items-center justify-center" id="confirmModal">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-11/12 max-w-md">
+            <h2 class="text-xl font-bold mb-4">Confirmation</h2>
+            <p id="confirmMessage" class="mb-6">Êtes-vous sûr de vouloir effectuer cette action?</p>
+            <div class="flex justify-end gap-3">
+                <button id="confirmCancel" class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition">Annuler</button>
+                <button id="confirmOk" class="px-4 py-2 bg-danger text-white rounded-md hover:bg-red-700 transition">Confirmer</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast notifications -->
+    <div id="toast" class="fixed bottom-5 right-5 p-4 rounded-lg shadow-lg bg-white text-gray-800 z-50 transform translate-y-full transition-transform duration-300 max-w-sm"></div>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/book.js"></script>
+    <script src="js/category.js"></script>
+    <script src="js/borrow.js"></script>
+    <script src="js/user.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
