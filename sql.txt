@@ -1,0 +1,189 @@
+CREATE DATABASE IF NOT EXISTS devbook;
+USE devbook;
+
+-- Table des rôles
+CREATE TABLE IF NOT EXISTS roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- Table des utilisateurs
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+);
+
+-- Table des catégories
+CREATE TABLE IF NOT EXISTS categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table des livres
+CREATE TABLE IF NOT EXISTS books (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    author VARCHAR(100) NOT NULL,
+    category_id INT,
+    status ENUM('to_read', 'reading', 'read') DEFAULT 'to_read',
+    rating INT DEFAULT 0,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+);
+
+-- Table des emprunts
+CREATE TABLE IF NOT EXISTS borrows (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    book_id INT NOT NULL,
+    user_id INT NOT NULL,
+    borrow_date DATE NOT NULL,
+    expected_return_date DATE NOT NULL,
+    return_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Insertion des rôles
+INSERT INTO roles (name) VALUES ('admin'), ('student');
+
+-- Insertion des utilisateurs test (mot de passe: 'password123' haché)
+INSERT INTO users (name, email, password, role_id) VALUES
+('Admin User', 'admin@example.com', '$2b$10$5IpZA9uJvXEqW7Zw3lbdHOEz/YzKj9SnLi9QoO9fGBGLr.IY9cDLG', 1),
+('Student One', 'student1@example.com', '$2b$10$5IpZA9uJvXEqW7Zw3lbdHOEz/YzKj9SnLi9QoO9fGBGLr.IY9cDLG', 2),
+('Student Two', 'student2@example.com', '$2b$10$5IpZA9uJvXEqW7Zw3lbdHOEz/YzKj9SnLi9QoO9fGBGLr.IY9cDLG', 2);
+
+-- Insertion des catégories
+INSERT INTO categories (name, description) VALUES
+('JavaScript', 'Livres sur JavaScript et ses frameworks'),
+('Python', 'Livres sur le langage Python et ses bibliothèques'),
+('Architecture', 'Livres sur l\'architecture logicielle'),
+('DevOps', 'Livres sur DevOps et CI/CD'),
+('Base de données', 'Livres sur les bases de données SQL et NoSQL');
+
+-- Insertion des livres
+INSERT INTO books (title, author, category_id, status, rating, description) VALUES
+('Eloquent JavaScript', 'Marijn Haverbeke', 1, 'read', 5, 'Une introduction moderne à JavaScript'),
+('Clean Code', 'Robert C. Martin', 3, 'read', 5, 'Un guide pour écrire du code propre'),
+('Python Crash Course', 'Eric Matthes', 2, 'reading', 4, 'Un cours intensif sur Python'),
+('Docker in Action', 'Jeff Nickoloff', 4, 'to_read', 0, 'Guide pratique sur Docker'),
+('SQL Cookbook', 'Anthony Molinaro', 5, 'to_read', 0, 'Recettes pour résoudre des problèmes SQL courants');
+
+-- Insertion des emprunts
+INSERT INTO borrows (book_id, user_id, borrow_date, expected_return_date, return_date) VALUES
+(1, 2, '2023-01-15', '2023-01-29', '2023-01-28'),
+(2, 3, '2023-02-01', '2023-02-15', '2023-02-14'),
+(3, 2, '2023-03-10', '2023-03-24', NULL),
+(4, 3, '2023-04-05', '2023-04-19', NULL),
+(5, 2, '2023-04-20', '2023-05-04', '2023-05-01');
+
+-- Requêtes SQL demandées
+
+-- 1. Afficher la liste des tous les utilisateurs qui ont emprunté un livre ainsi que leur nombre trié par date descendant
+SELECT 
+    u.id, 
+    u.name, 
+    COUNT(b.id) AS borrow_count,
+    MAX(b.borrow_date) AS last_borrow_date
+FROM 
+    users u
+JOIN 
+    borrows b ON u.id = b.user_id
+GROUP BY 
+    u.id, u.name
+ORDER BY 
+    last_borrow_date DESC;
+
+-- 2. Afficher la liste des livres qui n'ont toujours pas été rendus alors qu'ils ont dépassé la date d'échéance d'emprunt
+SELECT 
+    b.id,
+    b.title,
+    b.author,
+    br.borrow_date,
+    br.expected_return_date,
+    u.name AS borrower_name,
+    DATEDIFF(CURRENT_DATE, br.expected_return_date) AS days_overdue
+FROM 
+    books b
+JOIN 
+    borrows br ON b.id = br.book_id
+JOIN 
+    users u ON br.user_id = u.id
+WHERE 
+    br.return_date IS NULL 
+    AND br.expected_return_date < CURRENT_DATE
+ORDER BY 
+    days_overdue DESC;
+
+-- 3. Afficher les catégories ainsi que le nombre de livre par catégorie
+SELECT 
+    c.id,
+    c.name,
+    COUNT(b.id) AS book_count
+FROM 
+    categories c
+LEFT JOIN 
+    books b ON c.id = b.category_id
+GROUP BY 
+    c.id, c.name
+ORDER BY 
+    book_count DESC;
+
+-- 4. Afficher en premier la catégorie ayant les livres les plus empruntés
+SELECT 
+    c.id,
+    c.name,
+    COUNT(br.id) AS borrow_count
+FROM 
+    categories c
+JOIN 
+    books b ON c.id = b.category_id
+JOIN 
+    borrows br ON b.id = br.book_id
+GROUP BY 
+    c.id, c.name
+ORDER BY 
+    borrow_count DESC;
+
+-- 5. Afficher tous les emprunts effectués à la date sélectionnée (exemple avec '2023-03-10')
+SELECT 
+    br.id,
+    b.title,
+    u.name AS borrower_name,
+    br.borrow_date,
+    br.expected_return_date,
+    br.return_date
+FROM 
+    borrows br
+JOIN 
+    books b ON br.book_id = b.id
+JOIN 
+    users u ON br.user_id = u.id
+WHERE 
+    br.borrow_date = '2023-03-10';
+
+-- 6. Afficher le top 10 des livres qui ont été le plus empruntés au courant d'un mois sélectionné (exemple pour mars 2023)
+SELECT 
+    b.id,
+    b.title,
+    b.author,
+    COUNT(br.id) AS borrow_count
+FROM 
+    books b
+JOIN 
+    borrows br ON b.id = br.book_id
+WHERE 
+    MONTH(br.borrow_date) = 3 AND YEAR(br.borrow_date) = 2023
+GROUP BY 
+    b.id, b.title, b.author
+ORDER BY 
+    borrow_count DESC
+LIMIT 10;
